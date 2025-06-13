@@ -49,7 +49,7 @@ Up = [zeros(n*6,1), repelem(indRoot,6,1), repmat((1:6)',n,1)];
 Pe = zeros(0,3);
 Be = zeros(0,3);
 
-case_load = 'uTorque';  % Options: 'uForce', 'uTorque'
+case_load = 'uForce';  % Options: 'uForce', 'uTorque'
 switch case_load
     case 'uForce' %F_z=1
         F_A = (y2-yc)/(y2-y1); 
@@ -261,7 +261,7 @@ hold off
 
 
 % Additional plot functions useful to visualize 3D model and modes
-scale=1e4;
+scale=1e6;
 plotDeformed('shell',xn,Tn,u_vec,scale);
 % This function plots the deformed structure: 
 % xn : Nodal coordinates matrix [Nnodes x 3]

@@ -1,6 +1,6 @@
 %% COMPUTATIONAL ENGINEERING
 % VÍCTOR SAVALL DE RAMON
-% CSM Project - Wing modellingsdfasdfasdf
+% CSM Project - Wing modellings
 
 
 %% PART I - BEAM MODELLING
