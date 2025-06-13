@@ -154,6 +154,7 @@ Kr = sparse(N_dof,N_dof);
 for e = 1:N_elem
     for i = 1:4
         % a) Determine whether it is or not a coplanar node
+        
         ind_beam = ismember(Tn(e,i),Tnb(:)); %only correct if node is not already a beam node
         alpha = acosd(dot(n(:,Tn(e,i)),k_vec(:,e))/norm(n(:,Tn(e,i))));
        if alpha<5  && ind_beam == false %we can consider node coplanar
