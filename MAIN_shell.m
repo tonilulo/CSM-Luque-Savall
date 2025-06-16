@@ -10,15 +10,22 @@ close all
 E   = 68.8e9;      % Young's modulus [Pa]
 nu  = 0.33;        % Poisson ratio [-]
 rho = 2700;        % Density [kg/m^3]
-h1  = 30e-3;       % Thickness (front) [m]
-h2  = 25e-3;       % Thickness (aft) [m]
-h3  = 11e-3;        % Thickness (upper) [m]
+h1=0.030; 
+h2=0.025;    
+h3=0.011; 
 h   = [h1,h2,h3];  % Thickness (vector) [m]
-y1  = 0.345;       % Length from leading edge to front of wingbox [m]
-y2  = 0.960;       % Length from leading edge to aft of wingbox [m]
-yc  = 0.5791;      % Shear center position [m]
-
-%Others
+A  = 0.022;           % Area                [m^2]
+Iy_prima = 1.097e-4;        % I_y' (about local y') [m^4]
+Iz_prima = 12.087e-4;       % I_z' (about local z') [m^4]
+J  = 13.184e-4;       % Polar inertia        [m^4]
+ky_prima = 0.5975;          % Shear correction factor along y'
+kz_prima = 0.1375;          % Shear correction factor along z'
+kt_prima = 0.2564;          % Torsion correction factor
+y0 = 0.6226;    %Inertia I_z
+y1 = 0.345;    % front spar           [m] (see Table 1)
+y2 = 0.960;    % rear  spar           [m]
+yc = 0.5791;   % shear centre y‑coord [m]
+c=1.5;
 b = 5;              % Wingspan [m]
 
 
@@ -29,17 +36,6 @@ load('shell.mat','xn','Tn','Tm','indRoot','indPointA','indPointB','indSpar1','in
 N_elem = size(Tn,1);
 N_nod = size(xn,1);
 N_dof = 6*N_nod; % total number degrees of freedom
-% xn : Nodal coordinates       
-%      |x1 y1 z1|
-%      |x2 y2 z2|
-%      |  ...   |
-% Tn : Nodal connectivities [Nelem x 4]
-% Tm : Material connectivities [Nelem x 1]
-% indRoot   : Array of indices for root section nodes.
-% indPointA : Index for node at point A.
-% indPointB : Index for node at point B.
-% indSpar1  : Array of indices for front spar centerline nodes.
-% indSpar2  : Array of indices for rear spar centerline nodes.
 
 % Define boundary conditions and forces data matrices: Up, Fe, Pe, Be
 n = size(indRoot,1);
@@ -49,12 +45,12 @@ Up = [zeros(n*6,1), repelem(indRoot,6,1), repmat((1:6)',n,1)];
 Pe = zeros(0,3);
 Be = zeros(0,3);
 
-case_load = 'uTorque';  % Options: 'uForce', 'uTorque'
+case_load = 'Force';  % Options: 'uForce', 'uTorque'
 switch case_load
-    case 'uForce' %F_z=1
+    case 'Force' %F_z=-1
         F_A = -(y2-yc)/(y2-y1); 
         F_B = -(yc-y1)/(y2-y1);
-    case 'uTorque'
+    case 'Torque'
         F_A = -1/(y2-y1); %M_x=1
         F_B = 1/(y2-y1);
     otherwise
@@ -72,7 +68,7 @@ if 1 % Set to 1 to (re)compute the system matrices and '0' to load them
     % Compute system matrices (as long as parameters don't change there is 
     % no need to repeat the matrix assembly on every run)
   
-    K = sparse(N_dof,N_dof);
+K = sparse(N_dof,N_dof);
 M = sparse(N_dof,N_dof);
 
 % 2.2) Assembly process:
@@ -95,16 +91,16 @@ for e = 1:N_elem
     % 2.2 c) Compute element matrices:
     % c1) 1 Gauss point quadrature matrices:
     N_1 = [1, 1, 1, 1]'/4;
-    N_1ksi = a/4;
+    N_1xi = a/4;
     N_1eta = b/4;
-    J_1 = zeros (2,2);
+    J1 = zeros (2,2);
 
     for i = 1:4
-        J_1 = J_1 + [N_1ksi(i); N_1eta(i)]*xn(Tn(e,i),:)*[i_vec, j_vec];
+        J1 = J1 + [N_1xi(i); N_1eta(i)]*xn(Tn(e,i),:)*[i_vec, j_vec];
     end %loop over nodes
 
-    N1_xmat = J_1^(-1)*[N_1ksi; N_1eta];
-    S_1 = 4*det(J_1); %area associated to Gauss point
+    N1_xmat = J1^(-1)*[N_1xi; N_1eta];
+    S1 = 4*det(J1); %area associated to Gauss point
 
     % c1.1) Shear component of stiffness matrix:
     Bs_i = zeros(2,5,4);
@@ -118,7 +114,7 @@ for e = 1:N_elem
 
     Bs(:,:,e) = [Bs_i(:,:,1),Bs_i(:,:,2),Bs_i(:,:,3),Bs_i(:,:,4)];
 
-    Ks(:,:,e) = S_1*[R(:,:,e)]'*[Bs(:,:,e)]'*Cs*[Bs(:,:,e)]*[R(:,:,e)];
+    Ks(:,:,e) = S1*[R(:,:,e)]'*[Bs(:,:,e)]'*Cs*[Bs(:,:,e)]*[R(:,:,e)];
 
     % c1.2) Membrane transverse component of stiffness matrix:
     Bmt_i = zeros(1,5,4);
@@ -128,7 +124,7 @@ for e = 1:N_elem
 
     Cmt = h(Tm(e))*E/(2*(1+nu));
     Bmt(:,:,e) = [Bmt_i(:,:,1),Bmt_i(:,:,2),Bmt_i(:,:,3),Bmt_i(:,:,4)];
-    Km(:,:,e) = S_1*[R(:,:,e)]'*[Bmt(:,:,e)]'*Cmt*[Bmt(:,:,e)]*[R(:,:,e)];
+    Km(:,:,e) = S1*[R(:,:,e)]'*[Bmt(:,:,e)]'*Cmt*[Bmt(:,:,e)]*[R(:,:,e)];
     
     % c2) 4 Gauss points quadrature matrices:
     Kb(:,:,e) = zeros(24,24);
@@ -403,64 +399,12 @@ u_y_avg     = (uy1+uy2)/2;
 
 xS = xn(indSpar1, 1);  
 
-% Save data for postprocessing in separate script file (useful when results
-% from different runs need to be compared)
+% Save data for postprocessing in separate script file
 save('shell_results.mat');
 
 % Include plot functions
 
-% figure
-% hold on
-% for mode = 1:N_modes
-% plot(xS,u_z_avg(:,mode),'LineWidth',2)
-% end
-% legend('Mode 1','Mode 2','Mode 3','Mode 4','Mode 5','Mode 6',Location='best')
-% xlabel('Span position, $x$ (m)', 'Interpreter', 'latex', 'FontSize', 14);
-% ylabel('Vertical deflection, $u_z$ (m)', 'Interpreter', 'latex', 'FontSize', 14);
-% title('Vertical deflection distribution along the wingspan', 'FontWeight', 'bold', 'FontSize', 14);
-% grid on
-% grid minor
-% box on
-% axis padded
-% %xlim([0,b]);
-% hold off
-% 
-% 
-% figure
-% hold on
-% for mode = 1:N_modes
-% plot(xS,u_y_avg(:,mode),'LineWidth',2)
-% end
-% legend('Mode 1','Mode 2','Mode 3','Mode 4','Mode 5','Mode 6',Location='best')
-% xlabel('Span position, $x$ (m)', 'Interpreter', 'latex', 'FontSize', 14);
-% ylabel('Horizontal deflection, $u_y$ (m)', 'Interpreter', 'latex', 'FontSize', 14);
-% title('Horizontal deflection distribution along the wingspan', 'FontWeight', 'bold', 'FontSize', 14);
-% grid on
-% grid minor
-% box on
-% axis padded
-% %xlim([0,b]);
-% hold off
-
-
-
-
-% figure
-% hold on
-% for mode = 1:N_modes
-% plot(xS,theta_x_avg(:,mode),'LineWidth',2)
-% end
-% legend('Mode 1','Mode 2','Mode 3','Mode 4','Mode 5','Mode 6',Location='best')
-% xlabel('Span position, $x$ (m)', 'Interpreter', 'latex', 'FontSize', 14);
-% ylabel('Twist angle $\theta_x$ (rad)', 'Interpreter', 'latex', 'FontSize', 14)
-% title('Twist angle distribution along the wingspan', 'FontWeight', 'bold', 'FontSize', 14);
-% grid on
-% grid minor
-% box on
-% axis padded
-% %xlim([0,b]);
-
-% --- 3 subgráficas (u_y , u_z , theta_x) para cada modo ---
+% --- 3 subplots (u_y , u_z , theta_x) for each mode ---
 for iMode = 1:N_modes
     
     figure('Name',['Average fields – Mode ',num2str(iMode)],'Position',[200 200 560 420]);
@@ -495,8 +439,7 @@ for iMode = 1:N_modes
     
 end
 
-
-%% Vertical deflection  (u_z)  +  twist angle  (theta_x)  in a single plot
+% Vertical deflection  (u_z)  +  twist angle  (theta_x)  in a single plot
 xSpan = xn(indSpar1,1);     % posición along spanwise
 figure;hold on
 yyaxis left
