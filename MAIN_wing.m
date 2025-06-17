@@ -1,7 +1,7 @@
 %% PART III - WING MODELLING
 
-clear
-close all
+% clear
+% close all
 
 %% DATA
 % Define the problem's data (e.g. dimensions, material properties, etc.)
@@ -42,7 +42,7 @@ load('wing.mat','xn','Tn_st','Tm_st','Tn_wb','Tm_wb','Tn_rb','Tm_rb','Tn_sk','Tm
 N_nod = size(xn,1);
 N_dof = 6*N_nod; 
 
-onoff = struct('wb',1, 'sk',1, 'rb',1, 'st',1); %Turn off some elements
+onoff = struct('wb',1 , 'sk',1, 'rb',1, 'st',1); %Turn off some elements
 case_load = 'tunnel'; % Options 'uForce', 'uTorque', 'tunnel'.
 
 % 1.3 Boundary conditions Up (fix nodes and DOFs matrix)
@@ -108,9 +108,7 @@ switch case_load
          reshape(p_l.', [], 1), repelem(n_l(:,4), 3), repmat((1:3).', n2, 1)];
 
         Be = zeros(N_nod,3);
-        Be(:,1) = -g;
-        Be(:,3) = 3;
-        Be(:,2) = 1:N_nod;
+        Be(:,1) = -g;Be(:,3) = 3;Be(:,2) = 1:N_nod;
         Fe = zeros(0,3);
     otherwise
         error('Unsupported load type: %s', case_load);
@@ -121,20 +119,14 @@ end
 
 % Obtain system matrices
 
-% TIP: To avoid recomputing the system matrices use a save/load structure:
-if 1 % Set to 1 to (re)compute the system matrices and '0' to load them
-    
-    % Compute system matrices (as long as parameters don't change there is 
-    % no need to repeat the matrix assembly on every run)
-    % ...
-
+if 1 %If 1=Compute %If 0=No compute
    
     
 % Stringers (with beam elements)
 % Initialization
-N_elem_st       = numel(Tm_st);         
-K_st       = sparse(N_dof,N_dof); %using sparse
-M_st       = sparse(N_dof,N_dof);
+N_elem_st= numel(Tm_st);         
+K_st= sparse(N_dof,N_dof); %using sparse
+M_st= sparse(N_dof,N_dof);
 
 %Matrix definitions
 R_mat_1   = zeros(6,6);
@@ -1012,7 +1004,7 @@ for e = 1:N_elem_rb
         sigma_VM_rb(e,k) = max(sigma_VMplus_rb,sigma_VMminus_rb);
     end %loop over Gauss points
 end %loop over elements
-Imodes=[1,2];
+Imodes=[1,2,3,4,5,6];
 
 N_mode_reduc = numel(Imodes);            % Number of selected modes
 N_cases = size(f_vec, 2);        % Number of forcing vectors
@@ -1063,7 +1055,7 @@ xS = xn(indSpar1, 1);
 
 save('wing_results.mat');
 
-scale=5;
+scale=1;
 plotDeformed('wing',xn,Tn_wb,u_vec,scale,sigma_VM_wb); % For wingbox elements
 plotDeformed('wing',xn,Tn_rb,u_vec,scale,sigma_VM_rb); % For rib elements
 plotDeformed('wing',xn,Tn_sk,u_vec,scale,sigma_VM_sk); % For skin elements
@@ -1089,5 +1081,5 @@ plotDeformed('wing',xn,Tn_sk,u_vec,scale,sigma_VM_sk); % For skin elements
 % grid on;  grid minor;  box on;  axis padded;
 % xlim([0 5]);
 % 
-% %Modes
-% plotModes('wing',Phi,freq,Imodes)
+%Modes
+plotModes('wing',Phi,freq,Imodes)
